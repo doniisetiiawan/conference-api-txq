@@ -89,7 +89,7 @@ router
     );
   })
   .delete((req, res) => {
-    Speaker.remove(
+    Speaker.deleteOne(
       {
         _id: req.params.speaker_id,
       },
