@@ -16,6 +16,8 @@
   "rules": {
     "no-console": "off",
     "consistent-return": "off",
-    "no-param-reassign": "off"
+    "no-param-reassign": "off",
+    "array-callback-return": "off",
+    "no-shadow": "off"
   }
 }
