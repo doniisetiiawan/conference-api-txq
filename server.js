@@ -2,17 +2,22 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
 
-import Speaker from './server/models/speaker';
+import speakers from './server/routes/speakers';
+import config from './server/config/config';
 
 const app = express();
-const port = 3000;
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-mongoose.connect('mongodb://localhost/conference-api-txq', {
+mongoose.connect(config.url, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+});
+mongoose.connection.on('error', () => {
+  console.error(
+    'MongoDB Connection Error. Make sure MongoDB is running.',
+  );
 });
 
 const router = express.Router();
@@ -22,88 +27,14 @@ router.use((req, res, next) => {
   next();
 });
 
-router.get('/', (req, res) => {
-  res.json({ message: 'Hello SPA, the API is working!' });
+app.use('/api/speakers', speakers);
+
+app.set('port', process.env.PORT || 3000);
+
+const server = app.listen(app.get('port'), () => {
+  console.log(
+    `Express server listening on port ${
+      server.address().port
+    }`,
+  );
 });
-
-router
-  .route('/speakers')
-  .post((req, res) => {
-    const speaker = new Speaker();
-
-    speaker.name = req.body.name;
-    speaker.company = req.body.company;
-    speaker.title = req.body.title;
-    speaker.description = req.body.description;
-    speaker.picture = req.body.picture;
-    speaker.schedule = req.body.schedule;
-
-    speaker.save((err) => {
-      if (err) res.send(err);
-
-      res.json({
-        message: 'speaker successfully created!',
-      });
-    });
-  })
-  .get((req, res) => {
-    Speaker.find((err, speakers) => {
-      if (err) res.send(err);
-
-      res.json(speakers);
-    });
-  });
-
-router
-  .route('/speakers/:speaker_id')
-  .get((req, res) => {
-    Speaker.findById(
-      req.params.speaker_id,
-      (err, speaker) => {
-        if (err) res.send(err);
-        res.json(speaker);
-      },
-    );
-  })
-  .put((req, res) => {
-    Speaker.findById(
-      req.params.speaker_id,
-      (err, speaker) => {
-        if (err) res.send(err);
-
-        speaker.name = req.body.name;
-        speaker.company = req.body.company;
-        speaker.title = req.body.title;
-        speaker.description = req.body.description;
-        speaker.picture = req.body.picture;
-        speaker.schedule = req.body.schedule;
-
-        speaker.save((err) => {
-          if (err) res.send(err);
-
-          res.json({
-            message: 'speaker successfully updated!',
-          });
-        });
-      },
-    );
-  })
-  .delete((req, res) => {
-    Speaker.deleteOne(
-      {
-        _id: req.params.speaker_id,
-      },
-      (err, speaker) => {
-        if (err) res.send(err);
-
-        res.json({
-          message: 'speaker successfully deleted!',
-          speaker,
-        });
-      },
-    );
-  });
-
-app.use('/api', router);
-
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
