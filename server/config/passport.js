@@ -1,6 +1,6 @@
 import { Strategy as LocalStrategy } from 'passport-local';
 
-import User from '../models/user';
+import User from '../models/user.server.model';
 
 export default (passport) => {
   passport.serializeUser((user, done) => {
@@ -14,103 +14,34 @@ export default (passport) => {
   });
 
   passport.use(
-    'local-login',
     new LocalStrategy(
       {
-        usernameField: 'email',
+        usernameField: 'username',
         passwordField: 'password',
-        passReqToCallback: true,
       },
-      (req, email, password, done) => {
-        if (email) {
-          email = email.toLowerCase();
-        }
+      (username, password, done) => {
+        User.findOne(
+          {
+            username,
+          },
+          (err, user) => {
+            if (err) {
+              return done(err);
+            }
+            if (!user) {
+              return done(null, false, {
+                message: 'Unknown user',
+              });
+            }
+            if (!user.authenticate(password)) {
+              return done(null, false, {
+                message: 'Invalid password',
+              });
+            }
 
-        process.nextTick(() => {
-          User.findOne(
-            { 'local.email': email },
-            (err, user) => {
-              if (err) return done(err);
-
-              if (!user) {
-                return done(
-                  null,
-                  false,
-                  req.flash(
-                    'loginMessage',
-                    'No user found.',
-                  ),
-                );
-              }
-
-              if (!user.validPassword(password)) {
-                return done(
-                  null,
-                  false,
-                  req.flash(
-                    'loginMessage',
-                    'Wohh! Wrong password.',
-                  ),
-                );
-              }
-
-              return done(null, user);
-            },
-          );
-        });
-      },
-    ),
-  );
-
-  passport.use(
-    'local-signup',
-    new LocalStrategy(
-      {
-        usernameField: 'email',
-        passwordField: 'password',
-        passReqToCallback: true,
-      },
-      (req, email, password, done) => {
-        if (email) {
-          email = email.toLowerCase();
-        }
-
-        process.nextTick(() => {
-          if (!req.user) {
-            User.findOne(
-              { 'local.email': email },
-              (err, user) => {
-                if (err) return done(err);
-
-                if (user) {
-                  return done(
-                    null,
-                    false,
-                    req.flash(
-                      'signupMessage',
-                      'Wohh! the email is already taken.',
-                    ),
-                  );
-                }
-
-                const newUser = new User();
-
-                newUser.local.email = email;
-                newUser.local.password = newUser.generateHash(
-                  password,
-                );
-
-                newUser.save((err) => {
-                  if (err) throw err;
-
-                  return done(null, newUser);
-                });
-              },
-            );
-          } else {
-            return done(null, req.user);
-          }
-        });
+            return done(null, user);
+          },
+        );
       },
     ),
   );
